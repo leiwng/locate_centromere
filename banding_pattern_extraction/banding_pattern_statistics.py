@@ -35,16 +35,16 @@ if __name__ == "__main__":
             mean_bp = 0
             total   = 0
             for filename in os.listdir(data_path):
-        
+
                 if filename.endswith("0_2.png") and filename.startswith(str(type)+'_'): #by type
                 #if filename.endswith("0_2.png"):
 
                     print('Processing: ' + filename)
                     img_path = data_path + '/' + filename
                     img = cv.imread(img_path, 0)
-                    results = get_banding_pattern(img, chromsome_threshold=254)
+                    results = get_banding_pattern(img, chromosome_threshold=254)
                     #print(results['binarized_banding_pattern'])
-                    
+
                     if(not results['error']):
                         lens.append(len(results['binarized_banding_pattern']))
                         i = i+1
@@ -69,13 +69,13 @@ if __name__ == "__main__":
             f.write('Lengths vector:' + '\n')
             f.write(str(lens) + '\n')
             f.write('\n')
-            
+
         f.close()
 
 
     # Statistics by All images
     if(os.path.isdir(data_path)):
-        
+
         lens = []
         i = 0
         f = open(saving_path + "/all.csv",'x')
@@ -86,16 +86,16 @@ if __name__ == "__main__":
         total   = 0
 
         for filename in os.listdir(data_path):
-        
+
             #if filename.endswith("0_2.png") and filename.startswith(str(type)+'_'): #by type
             if filename.endswith("0_2.png"):
 
                 print('Processing: ' + filename)
                 img_path = data_path + '/' + filename
                 img = cv.imread(img_path, 0)
-                results = get_banding_pattern(img, chromsome_threshold=254)
+                results = get_banding_pattern(img, chromosome_threshold=254)
                 #print(results['binarized_banding_pattern'])
-                    
+
                 if(not results['error']):
                     lens.append(len(results['binarized_banding_pattern']))
                     i = i+1

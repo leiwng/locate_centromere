@@ -1,7 +1,7 @@
 import argparse
 import os
 import csv
-import traceback 
+import traceback
 
 from scripts.banding_pattern_extraction import get_banding_pattern
 
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     pixel_sampling = args.pixel_sampling
     pixel_sigma = args.pixel_sigma
     density_sigma = args.density_sigma
-    chromsome_threshold = args.threshold
+    chromosome_threshold = args.threshold
     step_vector = 1
 
     file_list = os.listdir(source_path)
@@ -38,7 +38,7 @@ if __name__ == "__main__":
         img = cv.imread(file_path, 0)
 
         try:
-            bp = get_banding_pattern(img, pixel_sampling, pixel_sigma, density_sigma, step_vector, chromsome_threshold=chromsome_threshold, reject_multiple_blobs=False)
+            bp = get_banding_pattern(img, pixel_sampling, pixel_sigma, density_sigma, step_vector, chromosome_threshold=chromosome_threshold, reject_multiple_blobs=False)
             if not bp['error']:
                 banding_patterns[file_name] = bp['binarized_banding_pattern']
             else:

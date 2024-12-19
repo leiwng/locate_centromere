@@ -28,137 +28,11 @@ from skimage import morphology
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
-from shapely.geometry import LineString, MultiPoint, Point
 
 
 MAX_DISTANCE = 99999
 SMALL_CONTOUR_AREA_OF_CHROMO = 10
 WRAPPER_SIZE_4_CHROMO_TOUCH_BORDER = 400
-
-
-def calc_intersections_between_skeleton_vline_and_contour(contour, skeleton_pixels, pixel_interval=1, line_length=1000):
-    """
-    逐点计算骨架点的垂线方向，与轮廓的交点、距离以及中点。
-
-    参数:
-    - contour: 轮廓
-    - skeleton_pixels: 骨架点集合，形状为 (M, 2)
-    - pixel_interval: 求垂线时，骨架上线段端点同当前求垂线点的间隔点数，默认为 1
-    - line_length: 垂线长度，默认为 1000
-
-    返回:
-    - results: 包含每个骨架点的结果，包括交点、距离和中点
-    """
-
-    if len(contour[:, 0, :]) < 3:
-        raise ValueError("calculate_normals_and_intersections: Contour must contain at least 2 unique points to create a valid LineString.")
-
-    # 转换轮廓为 Shapely 的 LineString
-    # contour_line = LineString(contour)
-    contour_line = LineString(contour[:, 0, :])
-
-    results = []
-
-    for i in range(len(skeleton_pixels)):
-        # 当前骨架点
-        x2, y2 = skeleton_pixels[i]
-
-        # 处理骨架的前后点，允许点间隔可调
-        if i - pixel_interval < 0:  # 如果前点越界，使用当前点代替
-            x1, y1 = x2, y2
-        else:
-            x1, y1 = skeleton_pixels[i - pixel_interval]
-
-        if i + pixel_interval >= len(skeleton_pixels):  # 如果后点越界，使用当前点代替
-            x3, y3 = x2, y2
-        else:
-            x3, y3 = skeleton_pixels[i + pixel_interval]
-
-        # 计算切线方向 dx, dy
-        dx = (x3 - x1) / 2.0
-        dy = (y3 - y1) / 2.0
-
-        # 垂线方向 -dy, dx
-        normal_dx = -dy
-        normal_dy = dx
-
-        # 定义垂线 (无限延长)
-        line_start = (x2 - normal_dx * line_length, y2 - normal_dy * line_length)
-        line_end = (x2 + normal_dx * line_length, y2 + normal_dy * line_length)
-        normal_line = LineString([line_start, line_end])
-
-        # 求垂线与轮廓的交点
-        intersections = contour_line.intersection(normal_line)
-
-        # 处理交点
-        intersection_coords = []
-        if isinstance(intersections, Point):
-            intersection_coords = [intersections.coords[0]]
-        elif isinstance(intersections, MultiPoint):
-            intersection_coords = [point.coords[0] for point in intersections.geoms]
-        elif isinstance(intersections, LineString):
-            # 如果交点是线段，取线段的两个端点
-            intersection_coords = [intersections.coords[0], intersections.coords[-1]]
-
-        # 取最近的两个交点
-        if len(intersection_coords) >= 2:
-            # 按距离排序，找到最近的两个交点
-            p1, p2 = sorted(intersection_coords, key=lambda p: np.linalg.norm(np.array(p) - np.array([x2, y2])))[:2]
-
-            # 计算交点间的距离
-            distance = np.sqrt((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2)
-
-            # 计算中点
-            midpoint = ((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2)
-
-            # 保存结果
-            results.append({
-                "skeleton_point": (x2, y2),
-                "intersection_points": (p1, p2),
-                "distance": distance,
-                "midpoint": midpoint
-            })
-
-    return results
-
-
-def contour_bbox_img(img, contour, padding=1):
-    """
-    Get the bounding box img of a contour.
-
-    Args:
-        img: Image.
-        contour: Contour.
-
-    Returns:
-        ori_cropped: bbox cropped from img.
-        gray_cropped: bbox cropped from gray img of img.
-        wbg_cropped: bbox cropped from img, with white background.
-    """
-    # if not grayscale, convert to grayscale
-    ori_img = img.copy()
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
-
-    # Create a mask for the contour
-    mask = np.zeros_like(gray)
-    cv2.drawContours(mask, [contour], -1, 255, thickness=cv2.FILLED)
-
-    # Extract the target
-    extracted = cv2.bitwise_and(gray, gray, mask=mask)
-
-    # get bounding box of the contour
-    x, y, w, h = cv2.boundingRect(contour)
-
-    # Crop the object with some padding, adjust padding as needed
-    padding = padding
-    gray_cropped = extracted[y - padding : y + h + padding, x - padding : x + w + padding]
-    ori_cropped = ori_img[y - padding : y + h + padding, x - padding : x + w + padding]
-
-    # make it white background
-    wbg_cropped = np.full_like(gray_cropped, 255, dtype=np.uint8)
-    np.copyto(wbg_cropped, gray_cropped, where=(gray_cropped > 0))
-
-    return ori_cropped, gray_cropped, wbg_cropped
 
 
 def feature_match_on_roi_for_flips(query_roi, target_roi):
@@ -361,7 +235,7 @@ def generate_distinct_colors(n):
     return colors
 
 
-def cv_imread(file_path, flag=cv2.IMREAD_COLOR):
+def cv_imread(file_path, flag=cv2.IMREAD_UNCHANGED):
     """读取带中文路径的图片文件
     Args:
         file_path (_type_): _description_
@@ -484,6 +358,42 @@ def get_distance_between_two_contours(contour1, contour2):
                 contour2_nearest_point_idx = idx2
 
     return min_distance, contour1_nearest_point_idx, contour2_nearest_point_idx
+
+
+def contour_bbox_img(img, contour):
+    """
+    Get the bounding box img of a contour.
+
+    Args:
+        img: Image.
+        contour: Contour.
+
+    Returns:
+        cropped: Bounding box image, with grayscale and black background.
+        target_on_white: Bounding box image, with white background, not grayscale.
+    """
+    # if not grayscale, convert to grayscale
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
+
+    # Create a mask for the contour
+    mask = np.zeros_like(gray)
+    cv2.drawContours(mask, [contour], -1, 255, thickness=cv2.FILLED)
+
+    # Extract the target
+    extracted = cv2.bitwise_and(gray, gray, mask=mask)
+
+    # get bounding box of the contour
+    x, y, w, h = cv2.boundingRect(contour)
+
+    # Crop the object with some padding, adjust padding as needed
+    padding = 1
+    cropped = extracted[y - padding : y + h + padding, x - padding : x + w + padding]
+
+    # make it white background
+    wbg_cropped = np.full_like(cropped, 255, dtype=np.uint8)
+    np.copyto(wbg_cropped, cropped, where=(cropped > 0))
+
+    return cropped, wbg_cropped
 
 
 def erode_with_kernel(img, kernel=None, iterations=1):
@@ -865,10 +775,8 @@ def find_external_contours_en(
         _type_: _description_
     """
     # 灰化
-    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
-
-    # debug: save gray image
-    # cv_imwrite("gray_img.png", gray_img)
+    if len(img.shape) == 3:
+        gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     if bin_thresh is not None and bin_thresh >= 0:
         # 直接使用指定阈值bin_thresh进行二值化
@@ -886,15 +794,8 @@ def find_external_contours_en(
     else:
         raise ValueError("func:find_external_contours_en,bin_thresh参数错误")
 
-    # debug: save bin image
-    # cv_imwrite("bin_img.png", bin_img)
-
     # 找轮廓
     contours, _ = cv2.findContours(bin_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # debug: draw contours and save
-    # canvas = draw_external_contours_with_idx_label(img, contours)
-    # cv_imwrite("contours.png", canvas)
 
     return contours, dst_bin_thresh
     ### END of find_external_contours_en

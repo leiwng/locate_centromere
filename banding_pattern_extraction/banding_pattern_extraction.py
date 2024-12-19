@@ -24,7 +24,7 @@ if __name__ == "__main__":
     pixel_sampling = args.pixel_sampling
     pixel_sigma = args.pixel_sigma
     density_sigma = args.density_sigma
-    chromsome_threshold = args.threshold
+    chromosome_threshold = args.threshold
     size = args.size
     step_vector = 1
 
@@ -36,9 +36,9 @@ if __name__ == "__main__":
     # A lot of results for visualisation purposes
     try:
         t1 = time()
-        results = get_banding_pattern(img, pixel_sampling, pixel_sigma, density_sigma, step_vector, chromsome_threshold=254, size=size)
+        results = get_banding_pattern(img, pixel_sampling, pixel_sigma, density_sigma, step_vector, chromosome_threshold=254, size=size)
         print("Time: ", time() - t1)
-        
+
         if results["error"]:
             print(results["error_message"])
             print(results["stack_trace"])
@@ -46,8 +46,8 @@ if __name__ == "__main__":
     except Exception:
         traceback.print_exc()
         exit()
-        
-    
+
+
     binarized_banding_pattern = results['binarized_banding_pattern']
     banding_pattern_filtered = results['banding_pattern_filtered']
     banding_pattern_smooth = results['banding_pattern_smooth']
@@ -56,7 +56,7 @@ if __name__ == "__main__":
     r = results['r']
     c = results['c']
     r_interpolated = results['r_interpolated']
-    c_interpolated = results['c_interpolated'] 
+    c_interpolated = results['c_interpolated']
     r_sampled = results['r_sampled']
     c_sampled = results['c_sampled']
     paths = results['paths']
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     plt.imshow(bp_img, cmap=plt.cm.gray)
     plt.title("Banding Pattern")
 
-    # Combined 
+    # Combined
     fig, axes = plt.subplots(1, 4, figsize=(8, 8), sharex=True, sharey=True)
     ax = axes.ravel()
 
